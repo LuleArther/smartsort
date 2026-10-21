@@ -1,0 +1,27 @@
+{
+  "file": "model-640.onnx",
+  "imgsz": 640,
+  "names": [
+    "metal",
+    "organico",
+    "papel_y_carton",
+    "plastico",
+    "vidrio"
+  ],
+  "map": {
+    "metal": "metal",
+    "organico": "organic",
+    "papel_y_carton": "paper",
+    "plastico": "plastic",
+    "vidrio": "glass"
+  },
+  "labels": {
+    "metal": "Metal",
+    "organico": "Organic",
+    "papel_y_carton": "Paper and cardboard",
+    "plastico": "Plastic",
+    "vidrio": "Glass"
+  },
+  "version": "wastedetector-train6@640",
+  "source": "https://github.com/xrl3y/WasteDetector (MIT)"
+}

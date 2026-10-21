@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartSort | Luther Plastics</title>
+<meta name="description" content="SmartSort: AI-assisted waste identification and sorting for recycling stations. A Luther Plastics prototype.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#004739">
+<link rel="icon" type="image/png" href="../assets/img/logomark-gold.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/smartsort.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="topbar">
+    <div class="topbar-row">
+      <div class="brand">
+        <img src="../assets/img/logomark-gold.png" alt="" width="34" height="34">
+        <div class="brand-text"><b>SmartSort</b><span>Luther Plastics</span></div>
+      </div>
+
+      <div class="mode-switch" role="radiogroup" aria-label="Operating mode" id="mode-switch">
+        <button type="button" role="radio" data-mode="general" aria-checked="true">General waste</button>
+        <button type="button" role="radio" data-mode="plastic" aria-checked="false">Plastic type</button>
+      </div>
+
+      <div class="engine-chip" id="engine-chip" data-state="loading" role="status">
+        <span class="engine-dot" aria-hidden="true"></span>
+        <span id="engine-text">Starting&hellip;</span>
+        <button type="button" class="link-btn" id="engine-retry" hidden>Retry</button>
+      </div>
+    </div>
+    <nav class="tabs" aria-label="Sections">
+      <button type="button" data-view="sort" aria-current="page">Sort</button>
+      <button type="button" data-view="dashboard">Dashboard</button>
+      <button type="button" data-view="history">History</button>
+      <button type="button" data-view="train">Train</button>
+      <button type="button" data-view="settings">Settings</button>
+    </nav>
+  </header>
+
+  <div class="banners" id="banners" aria-live="polite"></div>
+
+  <main id="main">
+    <!-- ================= SORT ================= -->
+    <section class="view" id="view-sort" aria-labelledby="sort-title">
+      <h1 class="visually-hidden" id="sort-title">Sort items</h1>
+      <div class="sort-grid">
+        <div class="panel camera-panel">
+          <div class="panel-head">
+            <h2>Camera</h2>
+            <label class="camera-select-wrap" hidden>
+              <span class="visually-hidden">Camera</span>
+              <select id="camera-select"></select>
+            </label>
+          </div>
+          <div class="viewport" id="viewport">
+            <video id="video" playsinline muted autoplay></video>
+            <div class="frame-guide" aria-hidden="true"></div>
+            <canvas class="overlay" id="overlay" aria-hidden="true"></canvas>
+            <div class="flash" id="flash" aria-hidden="true"></div>
+            <div class="viewport-msg" id="camera-msg">
+              <div id="camera-msg-icon"></div>
+              <p id="camera-msg-text">The camera is off.</p>
+            </div>
+          </div>
+          <div class="live-bar">
+            <label class="switch"><input type="checkbox" id="live-toggle" role="switch"><span class="switch-ui" aria-hidden="true"></span><span>Live detection</span></label>
+            <div class="seg seg-sm" role="radiogroup" aria-label="Live layout" id="live-layout">
+              <button type="button" role="radio" data-layout="handheld" aria-checked="true">Hand-held</button>
+              <button type="button" role="radio" data-layout="table" aria-checked="false">Table / conveyor</button>
+            </div>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-learn-bg" hidden>Learn empty background</button>
+            <span class="live-stats small text-muted" id="live-stats" aria-live="off"></span>
+          </div>
+          <div class="camera-controls">
+            <button type="button" class="btn btn-primary btn-lg" id="btn-capture" disabled>
+              <span data-icon="camera"></span> Capture &amp; identify <kbd>Space</kbd>
+            </button>
+            <button type="button" class="btn btn-outline" id="btn-camera"><span data-icon="play"></span> <span>Start camera</span></button>
+            <label class="btn btn-outline" for="file-input"><span data-icon="upload"></span> Upload image</label>
+            <input type="file" id="file-input" accept="image/*" class="visually-hidden">
+          </div>
+          <p class="hint">One item at a time, centred in the frame, against a plain background, in good light.</p>
+        </div>
+
+        <div class="panel result-panel" id="result-panel" aria-live="polite" aria-busy="false"></div>
+      </div>
+
+      <section class="panel session-panel" aria-labelledby="session-title">
+        <div class="panel-head">
+          <div>
+            <h2 id="session-title">This session</h2>
+            <p class="text-muted small" id="session-meta"></p>
+          </div>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-new-session"><span data-icon="refresh"></span> New session</button>
+        </div>
+        <div id="session-body"></div>
+      </section>
+    </section>
+
+    <section class="view" id="view-dashboard" hidden aria-label="Dashboard"></section>
+    <section class="view" id="view-history" hidden aria-label="History"></section>
+    <section class="view" id="view-train" hidden aria-label="Train the local model"></section>
+    <section class="view" id="view-settings" hidden aria-label="Settings"></section>
+  </main>
+
+  <footer class="footer">
+    <p>SmartSort prototype v1.0 &middot; Luther Plastics Ltd &middot; Results are AI predictions from a camera image, not verified material identification. Records and photos stay on this device unless the cloud engine is switched on.</p>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
