@@ -6,7 +6,7 @@
    first (they are versioned and large). The cloud API is never cached.
    Bump VERSION when shipping changes to force a fresh precache.
    ========================================================= */
-const VERSION = 'smartsort-v5';
+const VERSION = 'smartsort-v6';
 const SHELL = [
   './',
   'index.html',
