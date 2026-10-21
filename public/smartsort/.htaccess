@@ -1,0 +1,25 @@
+# SmartSort operator console. Inherits the security headers from the
+# site root .htaccess (including camera=(self)).
+
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
+  AddType application/octet-stream .bin .onnx
+  # ONNX Runtime loads its .mjs helper as a module and its .wasm with
+  # streaming compilation; both need the exact types.
+  AddType text/javascript .mjs
+  AddType application/wasm .wasm
+</IfModule>
+
+<IfModule mod_headers.c>
+  # The service worker must be revalidated so updates reach stations.
+  <FilesMatch "^sw\.js$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_expires.c>
+  ExpiresActive On
+  # Model weights and TensorFlow.js are versioned by folder/file name.
+  ExpiresByType application/octet-stream "access plus 1 year"
+  ExpiresByType application/wasm "access plus 1 year"
+</IfModule>

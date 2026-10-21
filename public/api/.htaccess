@@ -1,0 +1,5 @@
+# Only identify.php is meant to be reachable from the web. Block the
+# config (API keys), the provider library and the rate-limit files.
+<FilesMatch "^(config|config\.example)\.php$">
+  Require all denied
+</FilesMatch>

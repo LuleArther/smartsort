@@ -1,0 +1,25 @@
+# Luther Sort, Hostinger subdomain root
+
+Options -Indexes
+
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  # Camera access for this site only, used by the photo capture button.
+  Header set Permissions-Policy "camera=(self), microphone=(), geolocation=()"
+</IfModule>
+
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType image/png "access plus 1 month"
+  ExpiresByType text/css "access plus 1 week"
+  ExpiresByType application/javascript "access plus 1 week"
+</IfModule>
+
+# Force HTTPS once the subdomain's SSL certificate is active (camera
+# capture on phones requires HTTPS).
+# <IfModule mod_rewrite.c>
+#   RewriteEngine On
+#   RewriteCond %{HTTPS} off
+#   RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# </IfModule>

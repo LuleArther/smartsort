@@ -1,0 +1,7 @@
+* text=auto eol=lf
+# Third-party builds and model weights: store byte-for-byte.
+public/smartsort/vendor/** -text
+*.wasm binary
+*.onnx binary
+*.bin binary
+*.png binary

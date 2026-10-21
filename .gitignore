@@ -1,0 +1,20 @@
+# Server secrets: real API keys live in config.php, never in git.
+public/api/config.php
+# Rate-limit counters written at runtime.
+public/api/storage/*
+!public/api/storage/.htaccess
+
+# Local tooling
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.pt
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

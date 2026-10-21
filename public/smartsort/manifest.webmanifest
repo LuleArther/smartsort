@@ -1,0 +1,13 @@
+{
+  "name": "SmartSort by Luther Plastics",
+  "short_name": "SmartSort",
+  "description": "AI-assisted waste identification and sorting for recycling stations.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F4F7F6",
+  "theme_color": "#004739",
+  "icons": [
+    { "src": "../assets/img/logomark-gold.png", "sizes": "any", "type": "image/png" }
+  ]
+}
