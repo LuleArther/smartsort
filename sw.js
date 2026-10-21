@@ -6,7 +6,7 @@
    first (they are versioned and large). The cloud API is never cached.
    Bump VERSION when shipping changes to force a fresh precache.
    ========================================================= */
-const VERSION = 'smartsort-v4';
+const VERSION = 'smartsort-v5';
 const SHELL = [
   './',
   'index.html',
@@ -47,7 +47,7 @@ const SHELL = [
   'models/mobilenet_v2_100_224/group1-shard2of4.bin',
   'models/mobilenet_v2_100_224/group1-shard3of4.bin',
   'models/mobilenet_v2_100_224/group1-shard4of4.bin',
-  '../assets/img/logomark-gold.png',
+  'img/logomark-gold.png',
 ];
 
 self.addEventListener('install', (e) => {
