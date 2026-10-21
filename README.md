@@ -6,7 +6,31 @@ An operator shows one item to a camera, or uploads a photo. SmartSort predicts t
 
 It lives in `public/smartsort/`, next to the existing public "Luther Sort" page (`public/index.html`), and does not change that page.
 
-## Run it
+## Online (free): GitHub Pages
+
+**Live site: https://lulearther.github.io/smartsort/**
+
+It's served free with HTTPS (needed for the camera) from the `gh-pages` branch. To publish changes, commit to `main`, then:
+
+```sh
+sh tools/deploy-pages.sh     # pushes public/smartsort/ to gh-pages; live in about a minute
+```
+
+What works where:
+
+- **Any device** (phones, laptops): camera, upload, live detection, records, dashboard and training all run in the browser. Identification uses the built-in waste model, so no internet is needed after the first visit and nothing is sent anywhere.
+- **The station PC with Ollama:** open **https://lulearther.github.io/smartsort/?station** (or Settings › Vision AI › *Use this computer's Ollama*). When the browser asks to let the site access devices on your local network, choose **Allow**. SmartSort then uses the Vision AI, and remembers the choice in that browser.
+  - Ollama must trust the site. On the development PC this is already set; on a new station PC run this once and restart Ollama:
+
+    ```bat
+    setx OLLAMA_ORIGINS "https://lulearther.github.io"
+    ```
+
+  - The website never contacts Ollama by itself, so visitors are not shown that permission prompt.
+
+Records and training photos are stored in each browser separately: export them from History or the Train tab to combine them.
+
+## Run it locally
 
 Any static web server works. Camera access needs `https://` or `localhost`.
 
@@ -158,6 +182,7 @@ public/smartsort/
   vendor/ort/          ONNX Runtime Web 1.20.1 (MIT)
   models/waste_yolov8n_cls/      WasteDetector YOLOv8n-cls, ONNX 640 px (MIT, see LICENSE-WasteDetector.txt)
   models/mobilenet_v2_100_224/   MobileNet V2 weights (Apache-2.0) + ImageNet labels
+tools/deploy-pages.sh   publishes public/smartsort/ to GitHub Pages (gh-pages branch)
 tools/fetch-vendor.mjs  re-downloads vendor/ and the MobileNet model (node tools/fetch-vendor.mjs)
 tools/export-waste-model.py  converts a YOLOv8 classification .pt to ONNX for SmartSort
 tools/controller-example/    Arduino/ESP32 sketch for the machine link
