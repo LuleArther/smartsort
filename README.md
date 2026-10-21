@@ -16,6 +16,32 @@ It's served free with HTTPS (needed for the camera) from the `gh-pages` branch. 
 sh tools/deploy-pages.sh     # pushes public/smartsort/ to gh-pages; live in about a minute
 ```
 
+### This PC as the AI server for everyone
+
+While the Luther PC runs the AI server, **everyone using the link** gets the Vision AI from the PC's GPU: phones, other laptops, anywhere. When the PC is off, the site falls back to the built-in model in each browser, and switches back by itself when the PC returns.
+
+Double-click **`tools/vision-server/start-ai-server.cmd`**, or run `node tools/vision-server/start.mjs`. Keep the "SmartSort AI server" window open; close it to go offline.
+
+On the Luther PC it starts by itself at login, via `SmartSort AI server.cmd` in the Windows Startup folder (`shell:startup`); delete that file to stop it starting automatically. Ollama also starts at login.
+
+What it does:
+
+1. Starts a **gatekeeper** (`tools/vision-server/server.mjs`) on `127.0.0.1:11435` in front of Ollama. It lets through only one kind of request: one image, sent to the vision model, from the SmartSort site.
+   - Downloading, deleting or running other models is refused, and so is text-only chat.
+   - Requests are limited in size and rate, and queued so the GPU is not swamped.
+   - Photos are never stored or logged, and visitor IPs are logged only as anonymous hashes.
+   - Ollama itself stays private on the PC.
+2. Opens a free **Cloudflare quick tunnel** (no account needed) to the gatekeeper. `cloudflared` is downloaded to `%LOCALAPPDATA%\SmartSort\` on first run.
+3. Publishes the tunnel's current address to `endpoint.json` on the repo's `vision-endpoint` branch, which the website reads. Quick tunnels get a new address each start; this step is what lets the same link keep working. If the tunnel drops it is reopened and republished, and on exit the PC is marked offline.
+
+It needs Ollama running with `qwen2.5vl:3b`, and the GitHub CLI logged in (`gh auth login`), which is used to publish the address.
+
+Notes:
+
+- The GPU is shared: a 3B model answers one picture at a time, so many live viewers at once slow each other down.
+- Quick tunnels have no uptime guarantee. For a permanent address, create a free Cloudflare account, set up a named tunnel, and point the site at it.
+- Visitors see a notice that their photos are sent to the Luther Plastics AI computer.
+
 What works where:
 
 - **Any device** (phones, laptops): camera, upload, live detection, records, dashboard and training all run in the browser. Identification uses the built-in waste model, so no internet is needed after the first visit and nothing is sent anywhere.

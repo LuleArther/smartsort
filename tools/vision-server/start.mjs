@@ -12,6 +12,8 @@
 import { spawn, execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import https from 'node:https';
+import { Resolver } from 'node:dns';
 import { server, PORT, MODEL } from './server.mjs';
 
 const REPO = process.env.SMARTSORT_REPO || 'LuleArther/smartsort';
@@ -82,9 +84,29 @@ function openTunnel() {
   });
 }
 
+/* Checks the public address using Cloudflare's DNS (1.1.1.1) rather than
+   the local router: asking the router for a brand-new tunnel name before
+   it exists makes many routers cache "does not exist" for a long time,
+   which would break the address for every device on this network. */
+const resolver = new Resolver();
+resolver.setServers(['1.1.1.1', '1.0.0.1']);
+const lookup = (host, opts, cb) => resolver.resolve4(host, (err, addrs) => {
+  if (err) return cb(err);
+  if (opts?.all) return cb(null, addrs.map((address) => ({ address, family: 4 })));
+  cb(null, addrs[0], 4);
+});
+
+function healthOk(url) {
+  return new Promise((resolve) => {
+    const req = https.get(`${url}/health`, { lookup, timeout: 5000 }, (res) => { res.resume(); resolve(res.statusCode === 200); });
+    req.on('timeout', () => { req.destroy(); resolve(false); });
+    req.on('error', () => resolve(false));
+  });
+}
+
 async function reachable(url, tries = 30) {
   for (let i = 0; i < tries; i++) {
-    try { if ((await fetch(`${url}/health`, { signal: AbortSignal.timeout(5000) })).ok) return true; } catch { /* DNS not ready yet */ }
+    if (await healthOk(url)) return true;
     await sleep(2000);
   }
   return false;
@@ -116,7 +138,14 @@ async function main() {
     if (!tags.models.some((m) => m.name === MODEL)) log(`WARNING: ${MODEL} is not installed. Run: ollama pull ${MODEL}`);
   } catch { log('WARNING: Ollama is not running yet. Requests will fail until it starts.'); }
 
-  await new Promise((r) => server.listen(PORT, '127.0.0.1', r));
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(PORT, '127.0.0.1', resolve);
+  }).catch((e) => {
+    if (e.code !== 'EADDRINUSE') throw e;
+    log(`Port ${PORT} is in use: the SmartSort AI server is probably already running. Nothing to do.`);
+    process.exit(0);
+  });
   log(`gatekeeper on 127.0.0.1:${PORT} for ${MODEL}`);
   await ensureCloudflared();
   await reconnect();
@@ -139,6 +168,7 @@ async function shutdown() {
 }
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
-process.on('SIGBREAK', shutdown); // closing the console window on Windows
+process.on('SIGBREAK', shutdown);
+process.on('SIGHUP', shutdown); // closing the console window on Windows
 
 main().catch((e) => { console.error(e); process.exit(1); });
