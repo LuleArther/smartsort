@@ -118,6 +118,13 @@ async function loop() {
       await step(video);
       error = null;
     } catch (e) {
+      if (e.offline) {
+        // The AI computer went away: carry on with the built-in model.
+        engines.markVisionDown(ctx.mode, e.message);
+        tracker.reset();
+        hooks.engineChanged?.();
+        continue;
+      }
       console.error('[smartsort] live', e);
       error = e.message;
       renderPanel(true);

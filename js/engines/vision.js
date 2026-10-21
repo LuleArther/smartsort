@@ -116,6 +116,52 @@ const PROMPT = 'You are the vision system of a waste sorting machine. List the s
 
 const cfgOf = (settings) => ({ ...DEFAULTS, ...(settings.vision || {}) });
 
+/* ---------- Where the model runs ----------
+   On localhost, or on a station PC that chose "Use this computer's
+   Ollama", requests go straight to Ollama on this machine. Everyone else
+   uses the Luther Plastics AI computer: tools/vision-server/start.mjs runs
+   it behind a gatekeeper and a Cloudflare tunnel, and publishes the
+   tunnel's current address in the repo, which is read here. */
+const LOCAL_PAGE = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+const DISCOVERY_API = 'https://api.github.com/repos/LuleArther/smartsort/contents/endpoint.json?ref=vision-endpoint';
+const DISCOVERY_RAW = 'https://raw.githubusercontent.com/LuleArther/smartsort/vision-endpoint/endpoint.json';
+const OFFLINE = 'The Luther Plastics AI computer is offline right now.';
+let remote = { url: null, at: 0, stale: true };
+
+export const usesLocal = (settings) => LOCAL_PAGE || settings.vision?.station === true;
+
+const offline = (msg) => Object.assign(new Error(msg), { offline: true });
+
+/* Looks up the AI computer's current address. Cached for 2 minutes, and
+   at most once a minute after a failure (GitHub allows 60 lookups an hour). */
+async function discover() {
+  const age = Date.now() - remote.at;
+  if (remote.at && (remote.stale ? age < 60000 : age < 120000)) return remote;
+  let info = null;
+  try {
+    const res = await fetch(DISCOVERY_API, { headers: { Accept: 'application/vnd.github.raw+json' }, cache: 'no-store', signal: AbortSignal.timeout(6000) });
+    if (res.ok) info = await res.json();
+  } catch { /* try the raw file next */ }
+  if (!info) {
+    try {
+      const res = await fetch(`${DISCOVERY_RAW}?t=${Date.now()}`, { cache: 'no-store', signal: AbortSignal.timeout(6000) });
+      if (res.ok) info = await res.json();
+    } catch { /* offline or blocked */ }
+  }
+  remote = { url: info?.online && info.url ? info.url : null, at: Date.now(), stale: false, updated: info?.updated || null };
+  return remote;
+}
+
+async function endpoint(settings) {
+  if (usesLocal(settings)) return { url: cfgOf(settings).url, local: true };
+  const r = await discover();
+  if (!r.url) throw offline(OFFLINE);
+  return { url: r.url, local: false };
+}
+
+/* Which source the vision engine uses, for the UI. */
+export const source = (settings) => (usesLocal(settings) ? 'local' : 'remote');
+
 /* Qwen2.5-VL reports boxes in pixels of the image it actually sees. It
    resizes anything that is not a multiple of 28 px, so send it a frame
    that already is one (about 0.8 megapixels), and boxes map back exactly. */
@@ -135,17 +181,20 @@ function frameFor(src) {
 let inflight = Promise.resolve();
 
 export async function check(settings, { timeout = 4000 } = {}) {
-  const { url, model } = cfgOf(settings);
+  const { model } = cfgOf(settings);
+  const { url, local } = await endpoint(settings);
   let tags;
   try {
-    const res = await fetch(`${url}/api/tags`, { signal: AbortSignal.timeout(timeout) });
+    const res = await fetch(`${url}/api/tags`, { signal: AbortSignal.timeout(local ? timeout : Math.max(timeout, 8000)) });
     tags = await res.json();
+    if (!res.ok) throw new Error(tags?.error || `HTTP ${res.status}`);
   } catch {
-    throw new Error(`Ollama is not reachable at ${url}. Start Ollama on this computer. If SmartSort is opened from a website, also allow that site in OLLAMA_ORIGINS (see README).`);
+    if (!local) { remote.stale = true; throw offline(OFFLINE); }
+    throw offline(`Ollama is not reachable at ${url}. Start Ollama on this computer. If SmartSort is opened from a website, also allow that site in OLLAMA_ORIGINS (see README).`);
   }
   const have = (tags.models || []).map((m) => m.name);
   if (!have.some((n) => n === model || n === `${model}:latest`)) {
-    throw new Error(`The vision model "${model}" is not installed in Ollama. On this computer run: ollama pull ${model}`);
+    throw offline(local ? `The vision model "${model}" is not installed in Ollama. On this computer run: ollama pull ${model}` : 'The AI computer is online but its vision model is not ready.');
   }
   return true;
 }
@@ -153,7 +202,8 @@ export async function check(settings, { timeout = 4000 } = {}) {
 /* Returns every item in the picture: name, material words, SmartSort
    category, resin type, rating and a box in 0..1 frame units. */
 export async function scan(canvas, settings) {
-  const { url, model } = cfgOf(settings);
+  const { model } = cfgOf(settings);
+  const { url, local } = await endpoint(settings);
   const frame = frameFor(canvas);
   const image = frame.toDataURL('image/jpeg', 0.85).split(',')[1];
   const job = inflight.then(async () => {
@@ -173,10 +223,16 @@ export async function scan(canvas, settings) {
         }),
       });
     } catch (e) {
-      throw new Error(e.name === 'TimeoutError' ? 'The vision model took too long to answer.' : `Ollama is not reachable at ${url}. Is it running?`);
+      if (!local) remote.stale = true;
+      if (e.name === 'TimeoutError') throw new Error('The vision model took too long to answer.');
+      throw offline(local ? `Ollama is not reachable at ${url}. Is it running?` : OFFLINE);
     }
     const body = await res.json().catch(() => null);
-    if (!res.ok) throw new Error(body?.error ? `Ollama: ${body.error}` : `Ollama returned HTTP ${res.status}.`);
+    if (!res.ok) {
+      // A closed tunnel answers with Cloudflare's 5xx pages: treat as offline.
+      if (!local && (res.status >= 500 || res.status === 404 || res.status === 403)) { remote.stale = true; throw offline(body?.error || OFFLINE); }
+      throw new Error(body?.error ? `Vision AI: ${body.error}` : `The vision model returned HTTP ${res.status}.`);
+    }
     const items = parseItems(body.message.content);
     if (!items) throw new Error('The vision model gave an answer SmartSort could not read. Try again.');
     return items;

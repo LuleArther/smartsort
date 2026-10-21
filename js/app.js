@@ -117,10 +117,10 @@ function renderBanners() {
   if (!store.persistent) list.push({ id: 'storage', kind: 'warn', text: 'This browser is blocking local storage (private window?). Records and training photos will be lost when the page is closed.' });
   if (!window.isSecureContext) list.push({ id: 'insecure', kind: 'warn', text: 'The live camera only works over https:// or on localhost. Upload image still works.' });
   if (engineState.error) list.push({ id: 'engine-error', kind: 'error', text: `${engineState.error} Check the connection and press Retry, or choose another engine in Settings.`, sticky: true });
-  if (engineState.fallback) list.push({ id: 'vision-down', kind: 'warn', text: `Vision AI is not available, so the ${ENGINES[engines.effective(ctx.mode, ctx.settings)].short.toLowerCase()} is used instead. ${engineState.fallback} SmartSort retries every 30 seconds.`, sticky: true });
+  if (engineState.fallback) list.push({ id: 'vision-down', kind: 'warn', text: `${engineState.fallback} Using the ${ENGINES[engines.effective(ctx.mode, ctx.settings)].short.toLowerCase()} in this browser for now; SmartSort switches back to the Vision AI by itself when it returns.`, sticky: true });
   if (engineState.notReady) list.push({ id: 'not-ready', kind: 'warn', text: engineState.notReady, action: { label: 'Open Train', view: 'train' }, sticky: true });
   if (cfg.engine === 'baseline' && ctx.mode === 'plastic') list.push({ id: 'baseline-plastic', kind: 'info', text: 'The baseline model recognises object types, not polymers, so most plastic-type results will be flagged uncertain. For real plastic sorting, train the local model with your own PET, HDPE, PP and LDPE items.', action: { label: 'Open Train', view: 'train' } });
-  if (!IS_LOCAL && cfg.engine !== 'vision') list.push({ id: 'vision-hint', kind: 'info', text: 'Using the built-in waste model in this browser. On the station computer with Ollama, open Settings \u203a Vision AI \u203a "Use this computer\u2019s Ollama" (or this page with ?station) to identify every material, plastic types and people.', action: { label: 'Open Settings', view: 'settings' } });
+  if (!IS_LOCAL && cfg.engine === 'vision' && engines.vision.source(ctx.settings) === 'remote' && !engineState.fallback) list.push({ id: 'remote-privacy', kind: 'info', text: 'Photos are sent securely to the Luther Plastics AI computer to be identified. They are not stored there.' });
   if (cfg.engine === 'cloud') list.push({ id: 'cloud-privacy', kind: 'info', text: 'Cloud AI is on for this mode: each captured photo is sent to the Luther Sort server and an external AI service to be identified. Photos are not stored by SmartSort’s server.' });
   if (cfg.engine === 'cloud' && !navigator.onLine) list.push({ id: 'offline', kind: 'error', text: 'No internet connection, so the cloud engine cannot work. Switch to a local engine in Settings.', sticky: true });
 
@@ -236,6 +236,7 @@ async function analyse(canvas, source) {
   const base = { mode, input, quality, hash, source, thumb, ts: Date.now(), dup: duplicateOf(hash) };
   try {
     const out = await engines.classify(mode, ctx.settings, input, (id) => ctx.labelOf(id, mode));
+    if (out.fellBack) refreshEngine();
     if (mode !== ctx.mode) return; // mode switched mid-analysis
     pending = { ...base, out, d: decide(out, ctx.modeCfg(mode), quality) };
     renderResult();
@@ -721,19 +722,41 @@ const STATION_LINK = new URLSearchParams(location.search).has('station');
    the visitor before a site may reach the local network, and phones
    opening the link should not see that prompt. */
 async function detectVision() {
-  if (ctx.settings.vision.autoDetected || (!IS_LOCAL && !STATION_LINK)) return;
+  if (!IS_LOCAL && !STATION_LINK) {
+    // Website visitors: use the Luther AI computer when it is online, with
+    // the built-in model as automatic fallback.
+    if (!ctx.settings.vision.autoDetected) {
+      ctx.settings.vision.autoDetected = true;
+      for (const m of Object.keys(MODES)) ctx.settings.modes[m].engine = 'vision';
+      ctx.save();
+    }
+    return;
+  }
+  if (ctx.settings.vision.autoDetected && (IS_LOCAL || ctx.settings.vision.station)) return;
   if (!IS_LOCAL) setChip('loading', 'Connecting to Ollama: allow access if the browser asks\u2026');
   await ctx.useLocalVision({ quiet: true });
 }
 
+ctx.useRemoteVision = async () => {
+  ctx.settings.vision.station = false;
+  for (const m of Object.keys(MODES)) ctx.settings.modes[m].engine = 'vision';
+  ctx.save();
+  await refreshEngine();
+  live.reset();
+};
+
 ctx.useLocalVision = async ({ quiet = false } = {}) => {
+  const wasStation = ctx.settings.vision.station;
+  ctx.settings.vision.station = true; // so check() asks this computer
   try {
     await engines.vision.check(ctx.settings, { timeout: IS_LOCAL ? 4000 : 60000 });
   } catch (e) {
+    ctx.settings.vision.station = wasStation;
     if (!quiet) toast(e.message, 'error');
     return false;
   }
   ctx.settings.vision.autoDetected = true;
+  if (!IS_LOCAL) ctx.settings.vision.station = true;
   for (const m of Object.keys(MODES)) ctx.settings.modes[m].engine = 'vision';
   ctx.save();
   toast(`Vision AI connected (${ctx.settings.vision.model} in Ollama) and selected for both modes.`, 'ok');
@@ -753,6 +776,7 @@ async function init() {
     video,
     panel,
     renderIdle: () => { if (!pending) renderIdle(); },
+    engineChanged: () => refreshEngine(),
     onRecorded: (rec) => renderSession(rec.final ?? 'manual'),
   });
   bindEvents();
