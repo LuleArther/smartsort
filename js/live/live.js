@@ -187,6 +187,7 @@ async function step(video) {
    background is needed in either layout. A scan takes about a second,
    so an item is decided after `stableScans` scans in a row agree. */
 async function visionStep(video, frame, mode, cfg, L) {
+  if (!fps) $('#live-stats').textContent = 'Scanning\u2026 (the first scan also loads the model)';
   let { items, model } = await engines.vision.scan(frame, ctx.settings);
   if (mode !== ctx.mode || !running) return;
   // Table layout with a learned background: only trust items standing on

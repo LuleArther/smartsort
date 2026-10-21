@@ -120,6 +120,7 @@ function draw() {
         <label class="field"><span>Scans in a row that must agree before an item is decided (live)</span><input type="number" min="1" max="10" step="1" data-set="vision.stableScans" data-num value="${s.vision.stableScans}"></label>
       </div>
       <div class="btn-row" style="margin-top:0.9rem">
+        <button type="button" class="btn btn-secondary btn-sm" data-vision-use>Use this computer\u2019s Ollama</button>
         <button type="button" class="btn btn-outline btn-sm" data-vision-test>Test connection</button>
         <span class="small text-muted" data-vision-status></span>
       </div>
@@ -242,10 +243,17 @@ function onInput(e) {
 
 async function onClick(e) {
   const t = e.target;
+  if (t.closest('[data-vision-use]')) {
+    const status = el.querySelector('[data-vision-status]');
+    status.textContent = 'Connecting\u2026 if the browser asks to access devices on your local network, choose Allow.';
+    status.textContent = (await ctx.useLocalVision()) ? `Connected: ${ctx.settings.vision.model} is used for both modes.` : 'Not connected. Is Ollama running, and is this site allowed in OLLAMA_ORIGINS?';
+    draw();
+    return;
+  }
   if (t.closest('[data-vision-test]')) {
     const status = el.querySelector('[data-vision-status]');
     status.textContent = 'Checking\u2026';
-    try { await vision.check(ctx.settings); status.textContent = `Connected: ${ctx.settings.vision.model} is ready.`; } catch (err) { status.textContent = err.message; }
+    try { await vision.check(ctx.settings, { timeout: 60000 }); status.textContent = `Connected: ${ctx.settings.vision.model} is ready.`; } catch (err) { status.textContent = err.message; }
     return;
   }
   const mAct = t.closest('[data-machine]')?.dataset.machine;

@@ -120,6 +120,7 @@ function renderBanners() {
   if (engineState.fallback) list.push({ id: 'vision-down', kind: 'warn', text: `Vision AI is not available, so the ${ENGINES[engines.effective(ctx.mode, ctx.settings)].short.toLowerCase()} is used instead. ${engineState.fallback} SmartSort retries every 30 seconds.`, sticky: true });
   if (engineState.notReady) list.push({ id: 'not-ready', kind: 'warn', text: engineState.notReady, action: { label: 'Open Train', view: 'train' }, sticky: true });
   if (cfg.engine === 'baseline' && ctx.mode === 'plastic') list.push({ id: 'baseline-plastic', kind: 'info', text: 'The baseline model recognises object types, not polymers, so most plastic-type results will be flagged uncertain. For real plastic sorting, train the local model with your own PET, HDPE, PP and LDPE items.', action: { label: 'Open Train', view: 'train' } });
+  if (!IS_LOCAL && cfg.engine !== 'vision') list.push({ id: 'vision-hint', kind: 'info', text: 'Using the built-in waste model in this browser. On the station computer with Ollama, open Settings \u203a Vision AI \u203a "Use this computer\u2019s Ollama" (or this page with ?station) to identify every material, plastic types and people.', action: { label: 'Open Settings', view: 'settings' } });
   if (cfg.engine === 'cloud') list.push({ id: 'cloud-privacy', kind: 'info', text: 'Cloud AI is on for this mode: each captured photo is sent to the Luther Sort server and an external AI service to be identified. Photos are not stored by SmartSort’s server.' });
   if (cfg.engine === 'cloud' && !navigator.onLine) list.push({ id: 'offline', kind: 'error', text: 'No internet connection, so the cloud engine cannot work. Switch to a local engine in Settings.', sticky: true });
 
@@ -712,16 +713,34 @@ function bindEvents() {
 
 /* If Ollama with the vision model is running on this computer, use it
    (once: an operator who later picks another engine keeps that choice). */
+const IS_LOCAL = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+const STATION_LINK = new URLSearchParams(location.search).has('station');
+
+/* On localhost, or when opened with ?station, look for Ollama on this
+   computer and use it. A website never probes it uninvited: browsers ask
+   the visitor before a site may reach the local network, and phones
+   opening the link should not see that prompt. */
 async function detectVision() {
-  if (ctx.settings.vision.autoDetected) return;
+  if (ctx.settings.vision.autoDetected || (!IS_LOCAL && !STATION_LINK)) return;
+  if (!IS_LOCAL) setChip('loading', 'Connecting to Ollama: allow access if the browser asks\u2026');
+  await ctx.useLocalVision({ quiet: true });
+}
+
+ctx.useLocalVision = async ({ quiet = false } = {}) => {
   try {
-    await engines.vision.check(ctx.settings);
-  } catch { return; }
+    await engines.vision.check(ctx.settings, { timeout: IS_LOCAL ? 4000 : 60000 });
+  } catch (e) {
+    if (!quiet) toast(e.message, 'error');
+    return false;
+  }
   ctx.settings.vision.autoDetected = true;
   for (const m of Object.keys(MODES)) ctx.settings.modes[m].engine = 'vision';
   ctx.save();
-  toast(`Vision AI found (${ctx.settings.vision.model} in Ollama) and selected for both modes.`, 'ok');
-}
+  toast(`Vision AI connected (${ctx.settings.vision.model} in Ollama) and selected for both modes.`, 'ok');
+  await refreshEngine();
+  live.reset();
+  return true;
+};
 
 /* ---------- Start ---------- */
 async function init() {

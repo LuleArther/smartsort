@@ -134,11 +134,11 @@ function frameFor(src) {
 
 let inflight = Promise.resolve();
 
-export async function check(settings) {
+export async function check(settings, { timeout = 4000 } = {}) {
   const { url, model } = cfgOf(settings);
   let tags;
   try {
-    const res = await fetch(`${url}/api/tags`, { signal: AbortSignal.timeout(4000) });
+    const res = await fetch(`${url}/api/tags`, { signal: AbortSignal.timeout(timeout) });
     tags = await res.json();
   } catch {
     throw new Error(`Ollama is not reachable at ${url}. Start Ollama on this computer. If SmartSort is opened from a website, also allow that site in OLLAMA_ORIGINS (see README).`);
