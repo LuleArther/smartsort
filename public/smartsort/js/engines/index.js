@@ -74,13 +74,28 @@ export async function retryVision(mode, settings) {
   } finally { down.checking = false; }
 }
 
+/* Called when the Vision AI stops answering mid-use. */
+export function markVisionDown(mode, message) {
+  visionDown[mode] = { message, since: Date.now() };
+}
+
 /* input: { full: canvas, crop224: canvas, features?: cached } */
 export async function classify(mode, settings, input, labelOf) {
   const engine = effective(mode, settings);
   const t0 = performance.now();
   let out;
-  if (engine === 'vision') out = await vision.classify(input, mode, settings);
-  else if (engine === 'waste') out = await waste.classify(input, mode);
+  if (engine === 'vision') {
+    try {
+      out = await vision.classify(input, mode, settings);
+    } catch (e) {
+      if (!e.offline) throw e;
+      // The AI computer went away: answer with the built-in model now.
+      markVisionDown(mode, e.message);
+      out = await classify(mode, settings, input, labelOf);
+      out.fellBack = e.message;
+      return out;
+    }
+  } else if (engine === 'waste') out = await waste.classify(input, mode);
   else if (engine === 'baseline') out = await baseline.classify(input, mode);
   else if (engine === 'knn') out = await knn.classify(input, mode, settings, labelOf);
   else if (engine === 'custom') out = await custom.classify(input, mode, settings);
