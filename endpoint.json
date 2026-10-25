@@ -1,6 +1,6 @@
 {
-  "online": true,
-  "url": "https://drainage-happy-arrow-costume.trycloudflare.com",
+  "online": false,
+  "url": null,
   "model": "qwen2.5vl:3b",
-  "updated": "2026-10-25T11:08:56.632Z"
+  "updated": "2026-10-25T15:23:39.304Z"
 }
