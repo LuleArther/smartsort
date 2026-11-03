@@ -1,7 +1,6 @@
 {
-  "online": false,
-  "url": null,
+  "online": true,
+  "url": "https://sin-lexmark-implies-reservation.trycloudflare.com",
   "model": "qwen2.5vl:3b",
-  "updated": "2026-10-25T15:37:07.593248+00:00",
-  "note": "AI server disabled by owner"
+  "updated": "2026-11-03T21:05:11.431Z"
 }
