@@ -120,9 +120,9 @@ function draw() {
         <label class="field"><span>Scans in a row that must agree before an item is decided (live)</span><input type="number" min="1" max="10" step="1" data-set="vision.stableScans" data-num value="${s.vision.stableScans}"></label>
       </div>
       <div class="btn-row" style="margin-top:0.9rem">
-        <span class="small"><b>Now using:</b> ${vision.source(ctx.settings) === 'local' ? 'Ollama on this computer' : 'the Luther Plastics AI computer (online)'}</span>
+        <span class="small"><b>Now using:</b> ${vision.source(ctx.settings) === 'local' ? 'Ollama on this computer' : 'the free online Vision AI (Google Gemini; live detection stays in this browser)'}</span>
         <button type="button" class="btn btn-secondary btn-sm" data-vision-use>Use this computer\u2019s Ollama</button>
-        ${vision.source(ctx.settings) === 'local' && !['localhost', '127.0.0.1'].includes(location.hostname) ? '<button type="button" class="btn btn-outline btn-sm" data-vision-remote>Use the Luther AI computer instead</button>' : ''}
+        ${vision.source(ctx.settings) === 'local' && !['localhost', '127.0.0.1'].includes(location.hostname) ? '<button type="button" class="btn btn-outline btn-sm" data-vision-remote>Use the online Vision AI instead</button>' : ''}
         <button type="button" class="btn btn-outline btn-sm" data-vision-test>Test connection</button>
         <span class="small text-muted" data-vision-status></span>
       </div>
@@ -248,7 +248,7 @@ async function onClick(e) {
   if (t.closest('[data-vision-remote]')) {
     await ctx.useRemoteVision();
     draw();
-    toast('Using the Luther Plastics AI computer when it is online.', 'ok');
+    toast('Using the online Vision AI when it is available.', 'ok');
     return;
   }
   if (t.closest('[data-vision-use]')) {
