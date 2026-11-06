@@ -16,31 +16,20 @@ It's served free with HTTPS (needed for the camera) from the `gh-pages` branch. 
 sh tools/deploy-pages.sh     # pushes public/smartsort/ to gh-pages; live in about a minute
 ```
 
-### This PC as the AI server for everyone
+### Free online Vision AI
 
-While the Luther PC runs the AI server, **everyone using the link** gets the Vision AI from the PC's GPU: phones, other laptops, anywhere. When the PC is off, the site falls back to the built-in model in each browser, and switches back by itself when the PC returns.
+Everyone using the link gets the Vision AI through a free **Cloudflare Worker** (`tools/vision-worker/`), which sends each captured or uploaded photo to **Google Gemini**. No PC or paid server is involved.
 
-Double-click **`tools/vision-server/start-ai-server.cmd`**, or run `node tools/vision-server/start.mjs`. Keep the "SmartSort AI server" window open; close it to go offline.
+- The Gemini key is stored as a Cloudflare secret and never reaches the browser or this repo.
+- The Worker sets the prompt itself and only accepts one image from the SmartSort site, so the key can't be used for anything else.
+- Photos are not stored by SmartSort, but Gemini's free tier may use them to improve Google's products. The site tells visitors this.
+- **Live detection stays on the built-in model on the website**, because a scan every second would use up the free limit. Ollama on the station PC still gives live Vision AI.
+- If the free limit runs out or Gemini is down, the site uses the built-in model and retries by itself.
+- Keep Google billing turned off on this key's project so it stays free.
 
-On the Luther PC it starts by itself at login, via `SmartSort AI server.cmd` in the Windows Startup folder (`shell:startup`); delete that file to stop it starting automatically. Ollama also starts at login.
+To change the Worker, run this from `tools/vision-worker/`: `npx wrangler deploy`. To replace the key: `npx wrangler secret put GEMINI_API_KEY`.
 
-What it does:
-
-1. Starts a **gatekeeper** (`tools/vision-server/server.mjs`) on `127.0.0.1:11435` in front of Ollama. It lets through only one kind of request: one image, sent to the vision model, from the SmartSort site.
-   - Downloading, deleting or running other models is refused, and so is text-only chat.
-   - Requests are limited in size and rate, and queued so the GPU is not swamped.
-   - Photos are never stored or logged, and visitor IPs are logged only as anonymous hashes.
-   - Ollama itself stays private on the PC.
-2. Opens a free **Cloudflare quick tunnel** (no account needed) to the gatekeeper. `cloudflared` is downloaded to `%LOCALAPPDATA%\SmartSort\` on first run.
-3. Publishes the tunnel's current address to `endpoint.json` on the repo's `vision-endpoint` branch, which the website reads. Quick tunnels get a new address each start; this step is what lets the same link keep working. If the tunnel drops it is reopened and republished, and on exit the PC is marked offline.
-
-It needs Ollama running with `qwen2.5vl:3b`, and the GitHub CLI logged in (`gh auth login`), which is used to publish the address.
-
-Notes:
-
-- The GPU is shared: a 3B model answers one picture at a time, so many live viewers at once slow each other down.
-- Quick tunnels have no uptime guarantee. For a permanent address, create a free Cloudflare account, set up a named tunnel, and point the site at it.
-- Visitors see a notice that their photos are sent to the Luther Plastics AI computer.
+`tools/vision-server/` is the older setup, where a PC served the model through a tunnel. The website no longer uses it.
 
 What works where:
 
@@ -208,6 +197,7 @@ public/smartsort/
   vendor/ort/          ONNX Runtime Web 1.20.1 (MIT)
   models/waste_yolov8n_cls/      WasteDetector YOLOv8n-cls, ONNX 640 px (MIT, see LICENSE-WasteDetector.txt)
   models/mobilenet_v2_100_224/   MobileNet V2 weights (Apache-2.0) + ImageNet labels
+tools/vision-worker/    free Cloudflare Worker that connects the website to Gemini
 tools/deploy-pages.sh   publishes public/smartsort/ to GitHub Pages (gh-pages branch)
 tools/fetch-vendor.mjs  re-downloads vendor/ and the MobileNet model (node tools/fetch-vendor.mjs)
 tools/export-waste-model.py  converts a YOLOv8 classification .pt to ONNX for SmartSort

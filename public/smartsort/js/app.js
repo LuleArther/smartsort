@@ -120,7 +120,7 @@ function renderBanners() {
   if (engineState.fallback) list.push({ id: 'vision-down', kind: 'warn', text: `${engineState.fallback} Using the ${ENGINES[engines.effective(ctx.mode, ctx.settings)].short.toLowerCase()} in this browser for now; SmartSort switches back to the Vision AI by itself when it returns.`, sticky: true });
   if (engineState.notReady) list.push({ id: 'not-ready', kind: 'warn', text: engineState.notReady, action: { label: 'Open Train', view: 'train' }, sticky: true });
   if (cfg.engine === 'baseline' && ctx.mode === 'plastic') list.push({ id: 'baseline-plastic', kind: 'info', text: 'The baseline model recognises object types, not polymers, so most plastic-type results will be flagged uncertain. For real plastic sorting, train the local model with your own PET, HDPE, PP and LDPE items.', action: { label: 'Open Train', view: 'train' } });
-  if (!IS_LOCAL && cfg.engine === 'vision' && engines.vision.source(ctx.settings) === 'remote' && !engineState.fallback) list.push({ id: 'remote-privacy', kind: 'info', text: 'Photos are sent securely to the Luther Plastics AI computer to be identified. They are not stored there.' });
+  if (!IS_LOCAL && cfg.engine === 'vision' && engines.vision.source(ctx.settings) === 'remote' && !engineState.fallback) list.push({ id: 'remote-privacy', kind: 'info', text: 'Captured and uploaded photos are sent to Google Gemini to be identified. SmartSort does not store them, but Google may keep them and use them to improve its products. Live detection stays in this browser.' });
   if (cfg.engine === 'cloud') list.push({ id: 'cloud-privacy', kind: 'info', text: 'Cloud AI is on for this mode: each captured photo is sent to the Luther Sort server and an external AI service to be identified. Photos are not stored by SmartSort’s server.' });
   if (cfg.engine === 'cloud' && !navigator.onLine) list.push({ id: 'offline', kind: 'error', text: 'No internet connection, so the cloud engine cannot work. Switch to a local engine in Settings.', sticky: true });
 
@@ -723,7 +723,7 @@ const STATION_LINK = new URLSearchParams(location.search).has('station');
    opening the link should not see that prompt. */
 async function detectVision() {
   if (!IS_LOCAL && !STATION_LINK) {
-    // Website visitors: use the Luther AI computer when it is online, with
+    // Website visitors: use the free Vision AI service when it is available, with
     // the built-in model as automatic fallback.
     if (!ctx.settings.vision.autoDetected) {
       ctx.settings.vision.autoDetected = true;

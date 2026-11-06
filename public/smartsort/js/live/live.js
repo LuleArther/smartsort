@@ -89,7 +89,7 @@ export async function learnBackground() {
   renderPanel(true);
 }
 
-const isVision = () => engines.effective(ctx.mode, ctx.settings) === 'vision';
+const isVision = () => engines.liveEngine(ctx.mode, ctx.settings) === 'vision';
 const sceneLayout = () => layout === 'table' || isVision();
 
 export function syncUi() {
@@ -119,7 +119,7 @@ async function loop() {
       error = null;
     } catch (e) {
       if (e.offline) {
-        // The AI computer went away: carry on with the built-in model.
+        // The Vision AI went away: carry on with the built-in model.
         engines.markVisionDown(ctx.mode, e.message);
         tracker.reset();
         hooks.engineChanged?.();
@@ -151,7 +151,7 @@ function cropAround(frame, b) {
 }
 
 async function classifyCrop(mode, crop) {
-  return engines.classify(mode, ctx.settings, { full: crop, crop224: camera.squareCrop(crop, 224) }, (id) => ctx.labelOf(id, mode));
+  return engines.classify(mode, ctx.settings, { full: crop, crop224: camera.squareCrop(crop, 224) }, (id) => ctx.labelOf(id, mode), { live: true });
 }
 
 async function step(video) {
@@ -479,7 +479,7 @@ export function renderPanel(force = false) {
         ${stable ? `<div class="destination" style="--cat:${esc(cat.color)}">${binGraphic(cat)}<div><p class="eyebrow">Recommended destination</p><p class="dest-bin">${esc(cat.bin)}</p><p class="dest-instr">${esc(cat.instruction)}</p></div></div>`
           : d.reasons.length ? `<p class="small text-muted">${esc(d.reasons[0])}</p>` : ''}
         <p class="small text-muted">${ctx.settings.live.autoRecordHandheld ? 'Stable results are recorded automatically (unverified).' : 'Press <b>Capture</b> (Space) to record this item and confirm it.'}</p>
-        ${engines.effective(ctx.mode, ctx.settings) === 'waste' ? '<p class="small text-muted">The waste model always names the closest of its five types, even when no item is held up. Read results only while an item fills the square.</p>' : ''}`;
+        ${engines.liveEngine(ctx.mode, ctx.settings) === 'waste' ? '<p class="small text-muted">The waste model always names the closest of its five types, even when no item is held up. Read results only while an item fills the square.</p>' : ''}`;
     }
     body += `<label class="check live-auto"><input type="checkbox" id="live-auto" ${ctx.settings.live.autoRecordHandheld ? 'checked' : ''}> Record stable results automatically</label>`;
   }

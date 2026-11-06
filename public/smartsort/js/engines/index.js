@@ -27,6 +27,14 @@ export function effective(mode, settings) {
   return engine === 'vision' && visionDown[mode] ? FALLBACK[mode] : engine;
 }
 
+/* The engine live detection uses. On the website the Vision AI goes
+   through a free service with a daily limit, which a scan every second
+   would use up, so live detection stays on the built-in model there. */
+export function liveEngine(mode, settings) {
+  const engine = effective(mode, settings);
+  return engine === 'vision' && vision.source(settings) === 'remote' ? FALLBACK[mode] : engine;
+}
+
 export const fallbackReason = (mode, settings) => (settings.modes[mode].engine === 'vision' ? visionDown[mode]?.message || null : null);
 
 async function load(engine, mode, settings) {
@@ -80,8 +88,9 @@ export function markVisionDown(mode, message) {
 }
 
 /* input: { full: canvas, crop224: canvas, features?: cached } */
-export async function classify(mode, settings, input, labelOf) {
-  const engine = effective(mode, settings);
+export async function classify(mode, settings, input, labelOf, { live = false } = {}) {
+  const engine = live ? liveEngine(mode, settings) : effective(mode, settings);
+  if (live && engine !== effective(mode, settings)) await load(engine, mode, settings);
   const t0 = performance.now();
   let out;
   if (engine === 'vision') {
@@ -89,7 +98,7 @@ export async function classify(mode, settings, input, labelOf) {
       out = await vision.classify(input, mode, settings);
     } catch (e) {
       if (!e.offline) throw e;
-      // The AI computer went away: answer with the built-in model now.
+      // The Vision AI went away: answer with the built-in model now.
       markVisionDown(mode, e.message);
       out = await classify(mode, settings, input, labelOf);
       out.fellBack = e.message;

@@ -16,9 +16,9 @@ export const MODES = {
 export const ENGINES = {
   vision: {
     id: 'vision',
-    label: 'Vision AI (Ollama, e.g. qwen2.5vl:3b)',
+    label: 'Vision AI (online, or Ollama on this computer)',
     short: 'Vision AI',
-    note: 'A vision-language model running in Ollama on this computer: free and offline. Names every item in view with its material (plastic types, glass, metal, paper, wood, textile, ceramic, rubber, leather, organic…) and recognises people. About 1 second per picture on a mid-range GPU. Confidence is the model’s own high/medium/low rating; only high is acted on.',
+    note: 'On the website, photos are sent to Google Gemini, which may keep them and use them to improve its products. With Ollama on this computer it is free, offline and private. Names every item in view with its material (plastic types, glass, metal, paper, wood, textile, ceramic, rubber, leather, organic…) and recognises people. About 1 second per picture on a mid-range GPU. Confidence is the model’s own high/medium/low rating; only high is acted on.',
   },
   waste: {
     id: 'waste',

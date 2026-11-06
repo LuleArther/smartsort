@@ -1,0 +1,8 @@
+# Free Cloudflare Worker: lets the SmartSort website use Gemini without
+# showing the API key to visitors. The key is stored with
+#   npx wrangler secret put GEMINI_API_KEY
+# and must never be written in this file.
+name = "smartsort-ai"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+preview_urls = false
